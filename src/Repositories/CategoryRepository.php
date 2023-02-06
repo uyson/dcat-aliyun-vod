@@ -11,7 +11,6 @@ use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Repositories\Repository;
 use Dcat\Admin\Show;
-use Illuminate\Support\Arr;
 
 class CategoryRepository extends Repository
 {
@@ -34,7 +33,7 @@ class CategoryRepository extends Repository
         return false;
     }
 
-    public function get(Grid\Model $model)
+    public function get(Grid\Model $model = null)
     {
 
 

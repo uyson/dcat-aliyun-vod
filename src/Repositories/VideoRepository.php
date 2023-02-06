@@ -2,14 +2,12 @@
 
 namespace Uyson\DcatAdmin\AliyunVod\Repositories;
 
-use AlibabaCloud\SDK\Vod\V20170321\Models\AddCategoryRequest;
-use AlibabaCloud\SDK\Vod\V20170321\Models\GetCategoriesRequest;
-use AlibabaCloud\SDK\Vod\V20170321\Models\GetCategoriesResponse;
+use AlibabaCloud\SDK\Vod\V20170321\Models\CreateUploadVideoRequest;
+use AlibabaCloud\SDK\Vod\V20170321\Models\CreateUploadVideoResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfoRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfoResponse;
-use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfosRequest;
-use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoListRequest;
-use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoListResponse;
+use AlibabaCloud\SDK\Vod\V20170321\Models\RefreshUploadVideoRequest;
+use AlibabaCloud\SDK\Vod\V20170321\Models\RefreshUploadVideoResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\SearchMediaRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\SearchMediaResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\SearchMediaResponseBody\mediaList;
@@ -20,7 +18,7 @@ use Dcat\Admin\Form;
 use Dcat\Admin\Grid\Model;
 use Dcat\Admin\Show;
 use Dcat\Admin\Repositories\Repository;
-use Illuminate\Support\Arr;
+use Uyson\DcatAdmin\AliyunVod\Exceptions\BaseException;
 
 class VideoRepository extends Repository
 {
@@ -203,5 +201,53 @@ class VideoRepository extends Repository
             admin_error('出现错误', '点播分类获取失败');
         }
         return true;
+    }
+
+    public function createUploadVideo($fileName, $title, $cateId, $templateGroupId)
+    {
+        $client = app('uyson.aliyun.vod');
+        $createUploadVideoRequest = new CreateUploadVideoRequest([
+            "fileName" => $fileName,
+            "title" => $title,
+            "cateId" => $cateId,
+            "templateGroupId" => $templateGroupId
+        ]);
+        $runtime = new RuntimeOptions([]);
+        try {
+            /**
+             * @var CreateUploadVideoResponse $res
+             */
+            $res = $client->createUploadVideoWithOptions($createUploadVideoRequest, $runtime);
+            return $res->body->toMap();
+        }
+        catch (Exception $error) {
+            if (!($error instanceof TeaError)) {
+                throw new CreateUploadVideoRequestFailException($error->getMessage(), 400);
+            }
+
+            throw new CreateUploadVideoRequestFailException($error->message, 400);
+        }
+    }
+
+    public function refreshUploadVideoRequest($videoId)
+    {
+        $client = app('uyson.aliyun.vod');
+        $refreshUploadVideoRequest = new RefreshUploadVideoRequest([
+            "videoId" => $videoId
+        ]);
+        $runtime = new RuntimeOptions([]);
+        try {
+            /**
+             * @var RefreshUploadVideoResponse $res
+             */
+            $res = $client->refreshUploadVideoWithOptions($refreshUploadVideoRequest, $runtime);
+            return $res->body->toMap();
+        }
+        catch (Exception $error) {
+            if (!($error instanceof TeaError)) {
+                throw new RefreshUploadVideoRequestFailException($error->getMessage(), 400);
+            }
+            throw new RefreshUploadVideoRequestFailException($error->message, 400);
+        }
     }
 }

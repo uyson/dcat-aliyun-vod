@@ -2,6 +2,7 @@
 
 namespace Uyson\DcatAdmin\AliyunVod;
 
+use Admin;
 use Darabonba\OpenApi\Models\Config;
 use AlibabaCloud\SDK\Vod\V20170321\Vod;
 use Dcat\Admin\Extend\ServiceProvider;
@@ -9,7 +10,11 @@ use Dcat\Admin\Extend\ServiceProvider;
 class DcatAliyunVodServiceProvider extends ServiceProvider
 {
 	protected $js = [
+        'js/vue.min.js',
         'js/index.js',
+         'js/lib/es6-promise.min.js',
+         'js/lib/aliyun-oss-sdk-6.17.1.min.js',
+         'js/aliyun-upload-sdk-1.5.4.min.js',
     ];
 	protected $css = [
 		'css/index.css',
@@ -45,14 +50,16 @@ class DcatAliyunVodServiceProvider extends ServiceProvider
                 "accessKeySecret" => self::setting('accessKeySecret')
             ]);
             // 访问的域名
-            $config->endpoint = self::setting('endpoint');
+            $config->endpoint = sprintf("vod.%s.aliyuncs.com", self::setting('region'));
             return new Vod($config);
         });
+
 	}
 
 	public function init()
 	{
 		parent::init();
+        Admin::requireAssets('@uyson.dcat-aliyun-vod');
 	}
 
 	public function settingForm()
