@@ -1,7 +1,7 @@
 {
     "name": "uyson/dcat-aliyun-vod",
     "alias": "",
-    "description": "阿里云点播管理",
+    "description": "Dcat Admin 阿里云点播管理插件",
     "type": "library",
     "keywords": ["dcat-admin", "extension"],
     "homepage": "https://github.com/uyson/dcat-aliyun-vod",
