@@ -7,12 +7,14 @@ use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Http\Controllers\AdminController;
 use Dcat\Admin\Layout\Content;
+use Dcat\Admin\Show;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Uyson\DcatAdmin\AliyunVod\DcatAliyunVodServiceProvider;
 use Uyson\DcatAdmin\AliyunVod\Exceptions\BaseException;
+use Uyson\DcatAdmin\AliyunVod\Renderable\Player;
 use Uyson\DcatAdmin\AliyunVod\Repositories\CategoryRepository;
 use Uyson\DcatAdmin\AliyunVod\Repositories\TranscodeRepository;
 use Uyson\DcatAdmin\AliyunVod\Repositories\VideoRepository;
@@ -22,34 +24,43 @@ class VideoController extends AdminController
     public function grid()
     {
         return Grid::make(new VideoRepository(), function (Grid $grid) {
+            $cateRepo = new CategoryRepository();
+            $categories = Arr::pluck($cateRepo->get(), 'CateName', 'CateId');
+
+            $grid->actions(function (Grid\Displayers\Actions $actions) {
+//                $actions->disableView();
+                $actions->disableDelete();
+//                $actions->disableEdit();
+            });
 
             $grid->quickSearch('Title');
-            $grid->filter(function (Grid\Filter $filter) {
+            $grid->filter(function (Grid\Filter $filter) use ($categories) {
                 $filter->panel();
                 $filter->equal('VideoId', DcatAliyunVodServiceProvider::trans('video.VideoId'))
                     ->width(4);
                 $filter->equal(
+                    'CateId',
+                    DcatAliyunVodServiceProvider::trans('video.CateName')
+                )->radio(Arr::prepend($categories, '全部', 0));
+                $filter->equal(
                     'Status',
                     DcatAliyunVodServiceProvider::trans('video.Status'),
-                )
-                    ->radio(DcatAliyunVodServiceProvider::trans('video.options.Status'));
+                )->radio(Arr::prepend(DcatAliyunVodServiceProvider::trans('video.options.Status'), '全部', 0));
 
             });
-
 
             $grid->column('VideoId',
                 DcatAliyunVodServiceProvider::trans('video.VideoId')
             )->copyable();
             $grid->column('Title',
                 DcatAliyunVodServiceProvider::trans('video.Title')
-            );
+            )->editable();
             $grid->column('CoverURL',
                 DcatAliyunVodServiceProvider::trans('video.CoverURL')
             )->image('', 100, 100);
-
-            $grid->column('CateName',
+            $grid->column('CateId',
                 DcatAliyunVodServiceProvider::trans('video.CateName')
-            );
+            )->select($categories);
             $grid->column('Duration',
                 DcatAliyunVodServiceProvider::trans('video.Duration')
             )->display(fn($seconds) => sprintf('%02d:%02d:%02d', ($seconds/ 3600),($seconds/ 60 % 60), $seconds% 60));
@@ -85,6 +96,33 @@ class VideoController extends AdminController
                 )
             )
             );
+    }
+
+    public function form()
+    {
+        return Form::make(new VideoRepository(), function (Form $form) {
+            $cateRepo = new CategoryRepository();
+            $form->disableViewCheck();
+            $form->select('CateId')->options(Arr::pluck($cateRepo->get(), 'CateName', 'CateId'));
+            $form->text('Title');
+        });
+    }
+
+    public function detail($id)
+    {
+        return Show::make($id, new VideoRepository(), function (Show $show) use ($id) {
+            $show->disableDeleteButton();
+            $videoRepo = new VideoRepository();
+            $playAuth = $videoRepo->getPlayAuth($id, 3000);
+
+            $show->field('VideoId');
+            $show->field('Title');
+            $show->field('CateName');
+            $show->field('VideoId')->view(
+                'uyson.dcat-aliyun-vod::vod.player',
+                compact('id', 'playAuth')
+            );
+        });
     }
 
 

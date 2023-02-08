@@ -27,7 +27,6 @@ class CategoryController extends AdminController
             $grid->disableEditButton();
             $grid->disableViewButton();
             $grid->disableBatchActions();
-            $grid->disableCreateButton();
             $grid->disableRowSelector();
 
             $grid->column('CateId', DcatAliyunVodServiceProvider::trans('category.fields.CateId'))->copyable();

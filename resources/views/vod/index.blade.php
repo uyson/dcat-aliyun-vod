@@ -1,54 +1,58 @@
 
-<div class="dcat-box" id="vod-app">
-    <div class="d-block pb-0">
-        <div class="custom-data-table-header">
-            <div class="table-responsive">
-                <div class="top d-block clearfix p-0">
-                    <button class="btn btn-primary btn-mini btn-outline" data-toggle="modal" data-target="#add-vod-files" style="margin-right:3px">上传</button>
+<div class="row" id="vod-app">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="box-header with-border mb-1" style="padding: .65rem 1rem">
+
+                <button class="box-title btn btn-primary btn-mini btn-outline" data-toggle="modal" data-target="#add-vod-files" style="margin-right:3px">上传</button>
+                <div class="pull-right"><div class="btn-group pull-right" style="margin-right: 5px">
+                        <a href="{{admin_route('uyson.vod.videos.index')}}" class="btn btn-sm btn-primary "><i class="feather icon-list"></i><span class="d-none d-sm-inline">&nbsp;列表</span></a>
+                    </div></div>
+            </div>
+            <div class="box-body">
+                <div class="table-responsive table-wrapper complex-container table-middle mt-1 table-collapse ">
+                    <table class="table custom-data-table data-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">视频名称</th>
+                            <th scope="col">格式</th>
+                            <th scope="col">大小</th>
+                            <th scope="col">分类</th>
+                            <th scope="col">转码组</th>
+                            <th scope="col">上传状态</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr
+
+                            is="upload-item"
+                            v-for="(item, index) in taskList"
+                            :key="index"
+                            :file="item.file"
+                            :file-name="item.fileName"
+                            :cate-name="item.cateName"
+                            :template-group-name="item.templateGroupName"
+                            :user-data="item.userData"
+                            :user-id="userId"
+                            :region="region"
+                            :create-upload-video-auth-url="createUploadVideoAuthUrl"
+                            :refresh-upload-video-auth-url="refreshUploadVideoAuthUrl"
+                        ></tr>
+                        <tr v-if="taskList.length === 0">
+                            <td colspan="7" class="center">无上传视频、请添加视频</td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="table-responsive table-wrapper complex-container table-middle mt-1 table-collapse ">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th scope="col">视频名称</th>
-                <th scope="col">格式</th>
-                <th scope="col">大小</th>
-                <th scope="col">分类</th>
-                <th scope="col">转码组</th>
-                <th scope="col">上传状态</th>
-                <th scope="col">操作</th>
-            </tr>
-            </thead>
-            <tbody>
-                <tr
-
-                    is="upload-item"
-                    v-for="(item, index) in taskList"
-                    :key="index"
-                    :file="item.file"
-                    :file-name="item.fileName"
-                    :cate-name="item.cateName"
-                    :template-group-name="item.templateGroupName"
-                    :user-data="item.userData"
-                    :user-id="userId"
-                    :region="region"
-                    :create-upload-video-auth-url="createUploadVideoAuthUrl"
-                    :refresh-upload-video-auth-url="refreshUploadVideoAuthUrl"
-                ></tr>
-                <tr v-if="taskList.length === 0">
-                    <td colspan="7">请添加视频</td>
-                </tr>
-            </tbody>
-        </table>
     </div>
     <div class="modal" tabindex="-1" role="dialog" id="add-vod-files">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Modal title</h5>
+                    <h5 class="modal-title">添加视频</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -109,7 +113,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
                     <button type="button" class="btn btn-primary" v-on:click="addFilesToTaskList()">添加</button>
                 </div>
             </div>
@@ -128,8 +132,8 @@
             taskList : [],
             userId: "{{$userId}}",
             region: "{{$region}}",
-            refreshUploadVideoAuthUrl: "{{admin_url('dcat-aliyun-vod/videos/refresh-upload-video-request')}}",
-            createUploadVideoAuthUrl : "{{admin_url('dcat-aliyun-vod/videos/create-upload-video-request')}}",
+            refreshUploadVideoAuthUrl: "{{admin_route('uyson.vod.videos.refresh-upload-video')}}",
+            createUploadVideoAuthUrl : "{{admin_route('uyson.vod.videos.create-upload-video')}}",
         },
         created() {
             this.currentTranscode = Object.keys(this.transcodes)[0] ?? null;

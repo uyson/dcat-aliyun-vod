@@ -7,7 +7,7 @@ Vue.component('upload-item', {
             resumeDisabled: true,
             pauseDisabled: true,
             authProgress: 0,
-            statusText: '',
+            statusText: '待上传',
             uploader: null,
         };
     },
@@ -181,9 +181,9 @@ Vue.component('upload-item', {
         <td>{{ templateGroupName}} </td>
         <td>{{ statusText }} {{ authProgress }}% </td>
         <td>
-            <button @click="authUpload" v-bind:disabled="uploadDisabled">开始上传</button>
-            <button @click="pauseUpload" v-bind:disabled="pauseDisabled">暂停</button>
-            <button v-bind:disabled="resumeDisabled" @click="resumeUpload">恢复上传</button>
+            <button class="btn btn-primary" @click="authUpload" v-bind:disabled="uploadDisabled">开始</button>
+            <button class="btn btn-warning" @click="pauseUpload" v-bind:disabled="pauseDisabled">暂停</button>
+            <button class="btn btn-info" v-bind:disabled="resumeDisabled" @click="resumeUpload">恢复</button>
         </td>
     </tr>`
 });

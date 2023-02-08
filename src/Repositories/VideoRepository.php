@@ -6,19 +6,25 @@ use AlibabaCloud\SDK\Vod\V20170321\Models\CreateUploadVideoRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\CreateUploadVideoResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfoRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfoResponse;
+use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoPlayAuthRequest;
+use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoPlayAuthResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\RefreshUploadVideoRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\RefreshUploadVideoResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\SearchMediaRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\SearchMediaResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\SearchMediaResponseBody\mediaList;
 use AlibabaCloud\SDK\Vod\V20170321\Models\UpdateCategoryRequest;
+use AlibabaCloud\SDK\Vod\V20170321\Models\UpdateVideoInfoRequest;
 use AlibabaCloud\Tea\Exception\TeaError;
 use AlibabaCloud\Tea\Utils\Utils\RuntimeOptions;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid\Model;
 use Dcat\Admin\Show;
 use Dcat\Admin\Repositories\Repository;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Uyson\DcatAdmin\AliyunVod\Exceptions\BaseException;
+use Uyson\DcatAdmin\AliyunVod\Exceptions\GetPlayAuthFailException;
 
 class VideoRepository extends Repository
 {
@@ -44,7 +50,6 @@ class VideoRepository extends Repository
     public function get(\Dcat\Admin\Grid\Model $model)
     {
         $quickSearch = $model->grid()->quickSearch()->value();
-
         $currentPage = $model->getCurrentPage();
         $perPage = $model->getPerPage();
         $params = [
@@ -64,9 +69,14 @@ class VideoRepository extends Repository
         if (isset($inputs['Status']) && $inputs['Status']) {
             $matchs[] = "Status in ('{$inputs['Status']}')";
         }
+        if (isset($inputs['CateId']) && $inputs['CateId']) {
+            $matchs[] = "CateId={$inputs['CateId']}";
+        }
+
         if(count($matchs)) {
             $params['match'] = implode(" and ", $matchs);
         }
+
         $client = app('uyson.aliyun.vod');
         $searchMediaRequest = new SearchMediaRequest($params);
         $runtime = new RuntimeOptions([]);
@@ -155,6 +165,7 @@ class VideoRepository extends Repository
         $getCategoriesRequest = new GetVideoInfoRequest([
             'videoId' => $id
         ]);
+
         $runtime = new RuntimeOptions([]);
         try {
             // 复制代码运行请自行打印 API 的返回值
@@ -182,16 +193,20 @@ class VideoRepository extends Repository
     public function update(Form $form)
     {
         $id = $form->getKey();
+
         $attributes = $form->updates();
+        $params = [
+            'videoId' => $id
+        ];
+        foreach ($attributes as $key => $value) {
+            $params[lcfirst($key)] = $value;
+        }
         $client = app('uyson.aliyun.vod');
-        $updateCategoryRequest = new UpdateCategoryRequest([
-            "cateId" => $id,
-            "cateName" => $attributes['CateName']
-        ]);
+        $updateCategoryRequest = new UpdateVideoInfoRequest($params);
         $runtime = new RuntimeOptions([]);
         try {
             // 复制代码运行请自行打印 API 的返回值
-            $client->updateCategoryWithOptions($updateCategoryRequest, $runtime);
+            $client->updateVideoInfoWithOptions($updateCategoryRequest, $runtime);
         }
         catch (Exception $error) {
             if (!($error instanceof TeaError)) {
@@ -225,7 +240,7 @@ class VideoRepository extends Repository
                 throw new CreateUploadVideoRequestFailException($error->getMessage(), 400);
             }
 
-            throw new CreateUploadVideoRequestFailException($error->message, 400);
+            throw new CreateUploadVideoRequestFailException("创建上传视频失败", 400);
         }
     }
 
@@ -247,7 +262,32 @@ class VideoRepository extends Repository
             if (!($error instanceof TeaError)) {
                 throw new RefreshUploadVideoRequestFailException($error->getMessage(), 400);
             }
-            throw new RefreshUploadVideoRequestFailException($error->message, 400);
+            throw new RefreshUploadVideoRequestFailException("更新上传凭证失败", 400);
+        }
+    }
+
+    public function getPlayAuth(string $videoId, int $authInfoTimeout = 100)
+    {
+        $client = app('uyson.aliyun.vod');
+        $getVideoPlayAuthRequest = new GetVideoPlayAuthRequest([
+            'videoId' => $videoId,
+            'authInfoTimeout' => $authInfoTimeout,
+        ]);
+        $runtime = new RuntimeOptions([]);
+        try {
+            /**
+             * @var GetVideoPlayAuthResponse $res
+             */
+            $res = $client->getVideoPlayAuthWithOptions($getVideoPlayAuthRequest, $runtime);
+            return $res->body->playAuth;
+        }
+        catch (Exception $error) {
+            if (!($error instanceof TeaError)) {
+                $error = new TeaError([], $error->getMessage(), $error->getCode(), $error);
+                throw new GetPlayAuthFailException($error->getMessage(), 400);
+            }
+            Log::error('getvideoplayauthrequest-fail', [ 'exception' => $error ]);
+            throw new GetPlayAuthFailException('获取播放凭证失败', 400);
         }
     }
 }

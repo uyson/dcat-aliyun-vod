@@ -15,9 +15,12 @@ class DcatAliyunVodServiceProvider extends ServiceProvider
          'js/lib/es6-promise.min.js',
          'js/lib/aliyun-oss-sdk-6.17.1.min.js',
          'js/aliyun-upload-sdk-1.5.4.min.js',
+         'https://g.alicdn.com/de/prismplayer/2.13.2/aliplayer-min.js',
+
     ];
 	protected $css = [
 		'css/index.css',
+        'https://g.alicdn.com/de/prismplayer/2.13.2/skins/default/aliplayer-min.css',
 	];
 
     protected $menu = [
