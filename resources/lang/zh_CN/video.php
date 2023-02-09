@@ -7,6 +7,7 @@ return [
     'CateName' => '分类',
     'Duration'  => '长度',
     'CreationTime' => '创建日期',
+    'video' => '视频',
     'options' => [
         'Status' => [
             'Normal' => '正常',

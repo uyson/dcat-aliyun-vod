@@ -10,7 +10,6 @@
             playauth: '{{$playAuth}}',
             "isVBR":true,
         },function(player){
-            player.play();
             console.log('The player is created.')
         });
     });

@@ -115,10 +115,10 @@ class VideoController extends AdminController
             $videoRepo = new VideoRepository();
             $playAuth = $videoRepo->getPlayAuth($id, 3000);
 
-            $show->field('VideoId');
-            $show->field('Title');
+            $show->field('VideoId', DcatAliyunVodServiceProvider::trans('video.VideoId'));
+            $show->field('Title', DcatAliyunVodServiceProvider::trans('video.Title'));
             $show->field('CateName');
-            $show->field('VideoId')->view(
+            $show->field('VideoId', DcatAliyunVodServiceProvider::trans('video.video'))->view(
                 'uyson.dcat-aliyun-vod::vod.player',
                 compact('id', 'playAuth')
             );
