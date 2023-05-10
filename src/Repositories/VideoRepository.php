@@ -4,6 +4,9 @@ namespace Uyson\DcatAdmin\AliyunVod\Repositories;
 
 use AlibabaCloud\SDK\Vod\V20170321\Models\CreateUploadVideoRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\CreateUploadVideoResponse;
+use AlibabaCloud\SDK\Vod\V20170321\Models\GetPlayInfoRequest;
+use AlibabaCloud\SDK\Vod\V20170321\Models\GetPlayInfoResponse;
+use AlibabaCloud\SDK\Vod\V20170321\Models\GetPlayInfoResponseBody\playInfoList\playInfo;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfoRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoInfoResponse;
 use AlibabaCloud\SDK\Vod\V20170321\Models\GetVideoPlayAuthRequest;
@@ -17,14 +20,19 @@ use AlibabaCloud\SDK\Vod\V20170321\Models\UpdateCategoryRequest;
 use AlibabaCloud\SDK\Vod\V20170321\Models\UpdateVideoInfoRequest;
 use AlibabaCloud\Tea\Exception\TeaError;
 use AlibabaCloud\Tea\Utils\Utils\RuntimeOptions;
+use Carbon\Carbon;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid\Model;
 use Dcat\Admin\Show;
 use Dcat\Admin\Repositories\Repository;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Laravel\Octane\Exceptions\DdException as DdExceptionAlias;
+use Uyson\DcatAdmin\AliyunVod\DcatAliyunVodServiceProvider;
 use Uyson\DcatAdmin\AliyunVod\Exceptions\BaseException;
 use Uyson\DcatAdmin\AliyunVod\Exceptions\GetPlayAuthFailException;
+use Uyson\DcatAdmin\AliyunVod\Exceptions\GetPlayInfoFailException;
+use Uyson\DcatAdmin\AliyunVod\Models\Video;
 
 class VideoRepository extends Repository
 {
@@ -289,5 +297,134 @@ class VideoRepository extends Repository
             Log::error('getvideoplayauthrequest-fail', [ 'exception' => $error ]);
             throw new GetPlayAuthFailException('获取播放凭证失败', 400);
         }
+    }
+
+    /**
+     * @param string $videoId
+     * @return \AlibabaCloud\SDK\Vod\V20170321\Models\GetPlayInfoResponseBody
+     * @throws GetPlayInfoFailException
+     * @throws DdExceptionAlias
+     */
+    private function getPlayInfo(string $videoId)
+    {
+        $client = app('uyson.aliyun.vod');
+        $getPlayInfoRequest = new GetPlayInfoRequest([
+            "videoId" => $videoId
+        ]);
+        $runtime = new RuntimeOptions([]);
+        try {
+            /**
+             * @var GetPlayInfoResponse $res
+             */
+            $res = $client->getPlayInfoWithOptions($getPlayInfoRequest, $runtime);
+            return $res->body;
+        }
+        catch (Exception $error) {
+            Log::error('getvideoplayauthrequest-fail', [ 'exception' => $error ]);
+//            if (!($error instanceof TeaError)) {
+//                $error = new TeaError([], $error->getMessage(), $error->getCode(), $error);
+//                throw new GetPlayInfoFailException($error->getMessage(), 400);
+//            }
+            throw new GetPlayInfoFailException('获取播放地地址失败', 400);
+        }
+    }
+
+    /**
+     * @param string $videoId
+     * @return mixed
+     * @throws GetPlayInfoFailException
+     * @throws DdExceptionAlias
+     */
+    public function updatePlayInfo(string $videoId) {
+        $playInfo = $this->getPlayInfo($videoId);
+        $videoData = [
+            'id' => $playInfo->videoBase->videoId,
+            'title' => $playInfo->videoBase->title,
+            'status' => $playInfo->videoBase->status,
+            'media_type' => $playInfo->videoBase->mediaType,
+            'duration' => $playInfo->videoBase->duration,
+            'play_info_list' => $playInfo->playInfoList->playInfo,
+        ];
+        try {
+            return $video = Video::upsert($videoData, ['id']);
+        } catch (\Exception $e) {
+            throw new GetPlayInfoFailException('获取播放地地址失败', 400);
+        }
+    }
+
+    /**
+     * @param string $videoId
+     * @param int $uid
+     * @param $preview
+     * @param Carbon|null $expiresAt
+     * @return array
+     * @throws GetPlayInfoFailException
+     */
+    public function getPlayUrl(string $videoId, int $uid, $preview = 300,Carbon $expiresAt = null) {
+        if ($expiresAt == null) {
+            $expiresAt = now()->addHour(DcatAliyunVodServiceProvider::setting('valid_period') ?? 4);
+        }
+        $key = DcatAliyunVodServiceProvider::setting('primary_key');
+        /**
+         * @var Video $video
+         */
+        $video = Video::find($videoId);
+        if (!$video) {
+            $video = $this->updatePlayInfo($videoId);
+        }
+       $data = [];
+        foreach ($video->play_info_list as $playInfo) {
+            /**
+             * @var playInfo $playInfo
+             */
+
+            if ($playInfo->definition == 'AUTO') continue ;
+            $data[$playInfo->definition] = $this->urlAuth($uid, $playInfo->playURL, $key, $preview, $expiresAt);
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param int $uid
+     * @param string $url
+     * @param string $key
+     * @param int $preview
+     * @param Carbon $expiresAt
+     * @return string
+     */
+    private function urlAuth(int $uid, string $url, string $key,  int $preview, Carbon $expiresAt)
+    {
+        $parse = parse_url($url);
+        $baseUrl = sprintf("%s://%s%s", $parse['scheme'], $parse['host'], $parse['path']);
+        $url = $baseUrl . '?auth_key=' . $this->getAuthKey($uid, $parse['path'], $key, $expiresAt, $preview);
+        if ($preview) {
+            $url .= '&end=' . $preview;
+        }
+        return $url;
+    }
+
+    /**
+     * @param int $uid
+     * @param string $path
+     * @param string $key
+     * @param Carbon $expiresAt
+     * @param int $previewTime
+     * @return string
+     */
+    private function getAuthKey(int $uid, string $path, string $key, Carbon $expiresAt, int $previewTime)
+    {
+        $uid = $uid;
+        $rand = mt_rand(1000, 9999);
+        if(empty($key)) {
+            return '';
+        }
+        $authStr = $expiresAt->timestamp . '-' . $rand . '-' . $uid;
+        $md5Str = $path . '-' . $authStr . '-' . $key;
+        if ($previewTime!=0) {
+            $md5Str = $md5Str . '-' . $previewTime;
+        }
+        $authKey = $authStr . '-' . md5($md5Str);
+        return $authKey;
     }
 }

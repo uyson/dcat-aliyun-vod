@@ -28,7 +28,10 @@
         "laravel": {
             "providers": [
                 "Uyson\\DcatAdmin\\AliyunVod\\DcatAliyunVodServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Vod": "Uyson\\DcatAdmin\\AliyunVod\\Support\\Facades\\Vod"
+            }
         }
     }
 }

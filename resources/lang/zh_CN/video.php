@@ -17,6 +17,9 @@ return [
             'Transcoding' => '转发中',
             'TranscodeFail' => '转码失败',
             'Blocked' => '屏蔽',
+            'Checking' => '审核中',
+            'ProduceFail' => '合成失败',
+
         ],
     ]
 ];

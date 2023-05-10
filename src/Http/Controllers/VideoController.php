@@ -23,6 +23,7 @@ class VideoController extends AdminController
 {
     public function grid()
     {
+
         return Grid::make(new VideoRepository(), function (Grid $grid) {
             $cateRepo = new CategoryRepository();
             $categories = Arr::pluck($cateRepo->get(), 'CateName', 'CateId');

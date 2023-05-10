@@ -3,9 +3,11 @@
 namespace Uyson\DcatAdmin\AliyunVod;
 
 use Admin;
+use Closure;
 use Darabonba\OpenApi\Models\Config;
 use AlibabaCloud\SDK\Vod\V20170321\Vod;
 use Dcat\Admin\Extend\ServiceProvider;
+use Uyson\DcatAdmin\AliyunVod\Vod\VodManager;
 
 class DcatAliyunVodServiceProvider extends ServiceProvider
 {
@@ -41,7 +43,10 @@ class DcatAliyunVodServiceProvider extends ServiceProvider
         ]
     ];
 
-	public function register()
+    protected $registered = false;
+
+
+    public function register()
 	{
         require_once __DIR__.'/helpers.php';
 
@@ -57,12 +62,16 @@ class DcatAliyunVodServiceProvider extends ServiceProvider
             return new Vod($config);
         });
 
+
+        $this->app->bind('vod', fn($app) => new VodManager($app));
+
 	}
 
 	public function init()
 	{
 		parent::init();
         Admin::requireAssets('@uyson.dcat-aliyun-vod');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 	}
 
 	public function settingForm()
